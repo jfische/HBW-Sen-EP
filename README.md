@@ -1,6 +1,6 @@
 #Firmware für HBW-Sen-EP RS485 Modul:
  * Homematic Wired Hombrew Hardware Arduino nano als Homematic-Device 8-fach S0-Interface nach einer Vorlage von Thorsten Pferdekaemper  (thorsten@pferdekaemper.com) und Dirk Hoffmann (hoffmann@vmd-jena.de) 
- *mit Erweiterung um eine Identfy LED
+ * mit Erweiterung um eine Identfy LED
 
 ===================================
 
