@@ -15,12 +15,11 @@
 #define HMW_CONFIG_NUM_COUNTERS 8
 // config of one sensor
 struct hmw_counter_config {
-  unsigned int send_delta_count;            // ZÃ¤hlerdifferenz, ab der gesendet wird
-  unsigned int send_min_interval;   // Minimum-Sendeintervall
-  unsigned int send_max_interval;   // Maximum-Sendeintervall
+  unsigned int send_delta_count;       // ZÃ¤hlerdifferenz, ab der gesendet wird
+  unsigned int send_min_interval;      // Minimum-Sendeintervall
+  unsigned int send_max_interval;      // Maximum-Sendeintervall
+  unsigned int impulse_pro_einheit;            // Zaehlerimpulse pro Einheit
 };
-
-
 
 
 struct hmw_config {

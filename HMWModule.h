@@ -45,6 +45,25 @@ public:
 	//  2 -> missing ACK (three times)
 	byte sendInfoMessage(byte, uint16_t, uint32_t);   // channel, info, target address
 
+
+//-------------------------------------------------------------------------------
+// sendInfoMessageLong 4 Bytes returns...
+  //  0 -> ok
+  //  1 -> bus not idle
+  //  2 -> missing ACK (three times)
+  byte sendInfoMessageLong(byte, uint32_t, uint32_t);   // channel, info, target address
+//-------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------
+// sendInfoMessageLong 4 Bytes returns...
+  //  0 -> ok
+  //  1 -> bus not idle
+  //  2 -> missing ACK (three times)
+  byte sendInfoMessageVeryLong(byte, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t);   // channel, info, target address
+//-------------------------------------------------------------------------------
+
+
+
 	byte deviceType;        // device type @ 0x7FF1 in FlashRom  TODO: Not really...
 
 	// write to EEPROM, but only if not "value" anyway

@@ -159,7 +159,7 @@ void HMWModule::processEvent(byte const * const frameData, byte frameDataLength,
             sendAck = 2;
             break;
 
-         case 'ï¿½':                                                               // Key-Sim-Event
+         case 0xcb:                                                               // Key-Sim-Event
             processEventKey();
             sendAck = 2;
             break;
@@ -281,7 +281,47 @@ void HMWModule::processEventKey(){
   	   return hmwrs485->sendFrame(true);  // only if bus is free
      };
 
+   // "i-Message" Long senden
+   // this is only called from "outside" and not as a response
+     byte HMWModule::sendInfoMessageLong(byte channel, uint32_t info, uint32_t target_address) {
+       hmwrs485->txTargetAddress = target_address;  // normally central or broadcast
+       hmwrs485->txFrameControlByte = 0xF8;     // control byte
+       hmwrs485->txFrameDataLength = 0x06;      // Length
+       hmwrs485->txFrameData[0] = 0x69;         // 'i'
+       hmwrs485->txFrameData[1] = channel;      // Sensornummer
+       hmwrs485->txFrameData[2] = (info >> 24) & 0xFF;
+       hmwrs485->txFrameData[3] = (info >> 16) & 0xFF;
+       hmwrs485->txFrameData[4] = (info >> 8) & 0xFF;
+       hmwrs485->txFrameData[5] = info & 0xFF;
+       return hmwrs485->sendFrame(true);  // only if bus is free    
+     };
 
+   // "i-Message" Long senden
+   // this is only called from "outside" and not as a response
+     byte HMWModule::sendInfoMessageVeryLong(byte channel, uint32_t info, uint32_t info1, uint16_t info2, uint32_t info3, uint32_t target_address) {
+       hmwrs485->txTargetAddress = target_address;  // normally central or broadcast
+       hmwrs485->txFrameControlByte = 0xF8;     // control byte
+       hmwrs485->txFrameDataLength = 0x10;      // Length
+       hmwrs485->txFrameData[0] = 0x69;         // 'i'
+       hmwrs485->txFrameData[1] = channel;      // Sensornummer
+       hmwrs485->txFrameData[2] = (info >> 24) & 0xFF;
+       hmwrs485->txFrameData[3] = (info >> 16) & 0xFF;
+       hmwrs485->txFrameData[4] = (info >> 8) & 0xFF;
+       hmwrs485->txFrameData[5] = info & 0xFF;
+       hmwrs485->txFrameData[6] = (info1 >> 24) & 0xFF;
+       hmwrs485->txFrameData[7] = (info1 >> 16) & 0xFF;
+       hmwrs485->txFrameData[8] = (info1 >> 8) & 0xFF;
+       hmwrs485->txFrameData[9] = info1 & 0xFF;
+       hmwrs485->txFrameData[10] = info2 / 0x100;
+       hmwrs485->txFrameData[11] = info2 & 0xFF;
+       hmwrs485->txFrameData[12] = (info3 >> 24) & 0xFF;
+       hmwrs485->txFrameData[13] = (info3 >> 16) & 0xFF;
+       hmwrs485->txFrameData[14] = (info3 >> 8) & 0xFF;
+       hmwrs485->txFrameData[15] = info3 & 0xFF;
+       return hmwrs485->sendFrame(true);  // only if bus is free    
+     };
+
+     
      void HMWModule::writeEEPROM(int16_t address, byte value, bool privileged ) {
        // save uppermost 4 bytes
        if(!privileged && (address > E2END - 4))

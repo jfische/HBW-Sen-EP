@@ -4,7 +4,7 @@
 //
 // Homematic Wired Hombrew Hardware
 // Arduino Uno als Homematic-Device
-// HBW-Sen-EP zum ZÃ¯Â¿Â½hlen von elektrischen Pulsen (z.B. S0-Schnittstelle)
+// HBW-Sen-EP zum Zaehlen von elektrischen Pulsen (z.B. S0-Schnittstelle)
 //
 //*******************************************************************
 
@@ -70,7 +70,7 @@
 
 #include "HMWRegister.h"
 
-
+#include <TimerOne.h>
 
 
 // Das folgende Define kann benutzt werden, wenn ueber die
@@ -78,17 +78,26 @@
 // als Define, damit es zentral definiert werden kann, aber keinen (globalen) Speicherplatz braucht
 #define CHANNEL_PORTS byte channelPorts[HMW_CONFIG_NUM_COUNTERS] = {Sen1, Sen2, Sen3, Sen4, Sen5, Sen6, Sen7, Sen8};
 
-
-
 byte currentPortState[HMW_CONFIG_NUM_COUNTERS];
 byte oldPortState[HMW_CONFIG_NUM_COUNTERS];
-int currentCount[HMW_CONFIG_NUM_COUNTERS];
-int lastSentCount[HMW_CONFIG_NUM_COUNTERS];
+
+long currentCount[HMW_CONFIG_NUM_COUNTERS];
+long lastSentCount[HMW_CONFIG_NUM_COUNTERS];
 long lastSentTime[HMW_CONFIG_NUM_COUNTERS];
+
+long currentWh[HMW_CONFIG_NUM_COUNTERS];
+int countInTime[HMW_CONFIG_NUM_COUNTERS];
+
 long lastPortReadTime;
 
+int quotientWh[HMW_CONFIG_NUM_COUNTERS];
+byte channelWh;
+byte channelInTime;
 
-
+int alle_x_sekunden=6;
+int IntCount = 0;
+long countLeistung[HMW_CONFIG_NUM_COUNTERS];
+long currentLeistung[HMW_CONFIG_NUM_COUNTERS];
 
 #if DEBUG_VERSION == DEBUG_UNO
 SoftwareSerial rs485(RS485_RXD, RS485_TXD); // RX, TX
@@ -128,6 +137,7 @@ void setDefaults(){
     if(config.counters[channel].send_delta_count == 0xFFFF) config.counters[channel].send_delta_count = 1;
     if(config.counters[channel].send_min_interval == 0xFFFF) config.counters[channel].send_min_interval = 10;
     if(config.counters[channel].send_max_interval == 0xFFFF) config.counters[channel].send_max_interval = 150;
+    if(config.counters[channel].impulse_pro_einheit == 0xFF) config.counters[channel].impulse_pro_einheit = 1000;
   };
 };
 
@@ -320,34 +330,24 @@ void printChannelConf(){
 }
 #endif
 
-
-
-
+// ----------------------------------------------------------------------------------------------
 void handleCounter() {
-
   long now = millis();
 
-
-  //
-
-
-  CHANNEL_PORTS
+   CHANNEL_PORTS
   if ((now - lastPortReadTime) > POLLING_TIME) {
 
 	  for(byte channel = 0; channel < HMW_CONFIG_NUM_COUNTERS; channel++) {
 		  currentPortState[channel] = digitalRead(channelPorts[channel]);
 		  if (currentPortState[channel] > oldPortState[channel]) {
 			currentCount[channel]++;
+      countInTime[channel]++;
+      countLeistung[channel]++;
 		  }
-		  oldPortState[channel] = currentPortState[channel];
-
-
-	  }
+ 		  oldPortState[channel] = currentPortState[channel];
+  }
 	  lastPortReadTime = now;
   }
-
-
-
   // Pruefen, ob wir irgendwas senden muessen
 
   for(byte channel = 0; channel < HMW_CONFIG_NUM_COUNTERS; channel++) {
@@ -357,16 +357,54 @@ void handleCounter() {
     if(    (config.counters[channel].send_max_interval && now - lastSentTime[channel] >= (long)(config.counters[channel].send_max_interval) * 1000)
    	 || (config.counters[channel].send_delta_count
    	         && abs( currentCount[channel] - lastSentCount[channel] ) >= (config.counters[channel].send_delta_count))) {
-//	     hmwmodule->sendInfoMessage(channel,currentCount[channel],config.central_address);
+
+              currentWh[channel] = ((currentCount[channel] * 1000) /config.counters[channel].impulse_pro_einheit);
+
         // if bus is busy, then we try again in the next round
-	    if(hmwmodule->sendInfoMessage(channel,currentCount[channel], centralAddressGet()) != 1) {
+      if(hmwmodule->sendInfoMessageVeryLong(channel, currentCount[channel], currentWh[channel], countInTime[channel], currentLeistung[channel], centralAddressGet()) != 1) {
             lastSentCount[channel] = currentCount[channel];
             lastSentTime[channel] = now;
-		};
+
+            countInTime[channel] = 0;      
+      };
     };
   };
 }
+//            hmwdebug("\r\n");
+//            hmwdebug("   Channel     : ");      hmwdebug(channel);
+//            hmwdebug("   Impulse Gesamt: "); hmwdebug (currentCount[channel]);
+//            hmwdebug("   Wh Gesamt: "); hmwdebug (currentWh[channel]);
+//            hmwdebug("   Impulse pro Zeitintervall: "); hmwdebug (countInTime[channel]);
+//            hmwdebug("   Leistung: "); hmwdebug (currentLeistung[channel]);
+//            hmwdebug("   Impulse pro KWh: "); hmwdebug (config.counters[channel].impulse_pro_einheit);
+//            hmwdebug("\r\n");
 
+// -----------------------------------------------------------------------------------------
+
+
+void IntTimer1()
+{
+  if (IntCount < 50)      //5 Minuten
+   {
+      IntCount++;
+//      hmwdebug("Zaehler: "); hmwdebug(IntCount); hmwdebug("\r\n");
+   }
+   else
+   {
+      IntCount = 0;    
+      for(byte channelInt = 0; channelInt < HMW_CONFIG_NUM_COUNTERS; channelInt++) {
+
+
+              currentLeistung[channelInt] = ((countLeistung[channelInt] * 12) / (config.counters[channelInt].impulse_pro_einheit / 1000));
+
+           countLeistung[channelInt] = 0;
+//      hmwdebug("Leistung: "); hmwdebug(currentLeistung[channelInt]); hmwdebug("\r\n");
+      };
+   };
+}
+
+
+// -----------------------------------------------------------------------------------------
 
 
 
@@ -398,6 +436,8 @@ void setup()
    Serial.begin(19200, SERIAL_8E1);
 #endif
 
+
+
    // config aus EEPROM lesen
    hmwdevice.readConfig();
 
@@ -425,6 +465,11 @@ void setup()
   static byte IDENTY;
   IDENTY = EEPROM.read(IDENTIFY_EEPROM);
 
+//------------------------------------------------------------- Interupt Initialisieren
+Timer1.initialize(alle_x_sekunden*1000000);
+Timer1.attachInterrupt(IntTimer1);
+//-------------------------------------------------------------
+
   if (IDENTY == 0x00) {
      digitalWrite(IDENTIFY_LED, LOW);
      last_IDENT_LED_time = now;
@@ -439,7 +484,7 @@ void setup()
 
 	// device type: 0x84
    // TODO: Modultyp irgendwo als define
- 	hmwmodule = new HMWModule(&hmwdevice, &hmwrs485, 0x84);
+ 	 hmwmodule = new HMWModule(&hmwdevice, &hmwrs485, 0x84);
 
     hmwdebug("\n");
     hmwdebug("HBW-Sen-EP  - 8-Fach S0 interface\n");
