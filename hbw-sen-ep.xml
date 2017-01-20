@@ -111,7 +111,7 @@
 				</physical>
 				<conversion type="float_integer_scale" factor="1"/>
 			</parameter>
-			<parameter id="IMP_ZEITINTERVALL" operations="read,event" control="NONE">
+			<parameter id="IMP_ZEITINTERVAL" operations="read,event" control="NONE">
 				<logical type="float" min="0" max="65535"/>
 				<physical type="integer" interface="command" value_id="COUNTERINTIME">
 					<get request="LEVEL_GET" response="INFO_LEVEL"/>
