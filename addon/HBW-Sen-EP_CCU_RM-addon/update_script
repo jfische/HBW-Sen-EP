@@ -1,0 +1,55 @@
+#!/bin/sh
+
+ADDONNAME=HBW-Sen-EP
+ADDON_DIR=/usr/local/etc/config/addons/${ADDONNAME}
+RCD_DIR=/usr/local/etc/config/rc.d
+CONFIG_DIR=/usr/local/etc/config
+
+if [ "$1" = "" ]; then
+  echo "CCU1"
+  lcdtool "installing XML-API      "
+  mount -t yaffs /dev/mtdblock3 /usr/local
+elif [ "$1" = "CCU2" ]; then
+  echo "CCU2"
+  mount -t ubifs ubi1:user /usr/local
+elif [ "$1" = "HM-RASPBERRYMATIC" ]; then
+  echo "HM-RASPBERRYMATIC"
+  # mount /usr/local if not already mounted
+  mount | grep /usr/local 2>&1 >/dev/null
+  if [ $? -eq 1 ]; then
+    mount /usr/local
+  fi
+fi
+
+mkdir -p $ADDON_DIR
+chmod 755 $ADDON_DIR
+mkdir -p $RCD_DIR
+chmod 755 $RCD_DIR
+
+# remove old stuff
+rm -f $ADDON_DIR/*
+
+# copy all stuff and setup rc.d
+cp -R HBW-Sen-EP/* $ADDON_DIR/
+cp rc.d/HBW-Sen-EP $RCD_DIR/
+chmod +x $RCD_DIR/HBW-Sen-EP
+
+echo "all files copied."
+
+# sync filesystem to make sure all changes are written to disk
+sync
+
+if [ "$1" = "" ]; then
+  echo "CCU1"
+  lcdtool "Reboot...             "
+  lcdtool -a 0x40 -t bin 00
+  echo "x" > /dev/watchdog
+  reboot
+  while true ; do true ;  done
+elif [ "$1" = "CCU2" ]; then
+  echo "CCU2"
+  # CCU2 always reboots after Addon/Firmware Update
+elif [ "$1" = "HM-RASPBERRYMATIC" ]; then
+  echo "HM-RASPBERRYMATIC"
+  # RASPBERRYMATIC always reboots after Addon/Firmware Update
+fi

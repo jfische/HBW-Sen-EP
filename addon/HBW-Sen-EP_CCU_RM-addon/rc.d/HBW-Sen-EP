@@ -1,0 +1,113 @@
+#!/bin/sh
+
+ADDONNAME=HBW-Sen-EP
+ADDON_DIR=/usr/local/etc/config/addons/${ADDONNAME}
+RCD_DIR=/usr/local/etc/config/rc.d
+
+DEVICE="HBW-Sen-EP"
+
+DEVDESCR_FILE="/www/config/devdescr/DEVDB.tcl"
+DEVDESCR_SEARCH="array[[:space:]]*set[[:space:]]*DEV_PATHS[[:space:]]*{"
+
+DEVDESCR_INSERT=""
+DEVDESCR_INSERT="${DEVDESCR_INSERT} HBW-Sen-EP {{50 \/config\/img\/DEVICEs\/50\/HBW-Sen-EP_thumb.png} {250 \/config\/img\/devices\/250\/HBW-Sen-EP.png}} "
+
+WEBUI_FILE="/www/webui/webui.js"
+WEBUI_SEARCH="DEV_HIGHLIGHT[[:space:]]*=[[:space:]]*new Array();"
+
+WEBUI_INSERT="\n"
+WEBUI_INSERT="${WEBUI_INSERT} DEV_HIGHLIGHT['HBW-Sen-EP'] = new Object();\n"
+WEBUI_INSERT="${WEBUI_INSERT} DEV_LIST.push('HBW-Sen-EP');\n"
+WEBUI_INSERT="${WEBUI_INSERT} DEV_DESCRIPTION['HBW-Sen-EP']='RS485 Homebrew 8 S0 Eingänge (Hutschiene)';\n"
+WEBUI_INSERT="${WEBUI_INSERT} DEV_PATHS['HBW-Sen-EP'] = new Object();\n"
+WEBUI_INSERT="${WEBUI_INSERT} DEV_PATHS['HBW-Sen-EP']['50'] = '\/config\/img\/devices\/50\/HBW-Sen-EP_thumb.png';\n"
+WEBUI_INSERT="${WEBUI_INSERT} DEV_PATHS['HBW-Sen-EP']['250'] = '\/config\/img\/devices\/250\/HBW-Sen-EP.png';\n"
+
+case "$1" in
+""|start)
+  echo .
+  echo "Starting HomeBrew Wired ${DEVICE}"
+  mount -o rw,remount /
+
+  if [ ! -e /firmware/hs485types/hbw-sen-ep.xml ]; then
+    echo "File /firmware/hs485types/hbw-sen-ep.xml does not exist. Copying it..."
+    cp ${ADDON_DIR}/firmware/hs485types/hbw-sen-ep.xml /firmware/hs485types/hbw-sen-ep.xml
+    chmod 644 /firmware/hs485types/hbw-sen-ep.xml
+  fi
+
+  if [ ! -e /www/config/img/devices/50/HBW-Sen-EP_thumb.png ]; then
+    echo "File /www/config/img/devices/50/HBW-Sen-EP_thumb.png does not exist. Copying it..."
+    cp ${ADDON_DIR}/www/config/img/devices/50/HBW-Sen-EP_thumb.png /www/config/img/devices/50/HBW-Sen-EP_thumb.png
+    chmod 755 /www/config/img/devices/50/HBW-Sen-EP_thumb.png
+  fi
+
+  if [ ! -e /www/config/img/devices/250/HBW-Sen-EP.png ]; then
+    echo "File /www/config/img/devices/250/HBW-Sen-EP.png does not exist. Copying it..."
+    cp ${ADDON_DIR}/www/config/img/devices/250/HBW-Sen-EP.png /www/config/img/devices/250/HBW-Sen-EP.png
+    chmod 755 /www/config/img/devices/250/HBW-Sen-EP.png
+  fi
+
+
+  ### Edit DEVDB.tcl ###
+  DEVDESCR_MODIFYED=`cat ${DEVDESCR_FILE} | grep "${DEVICE}"`
+  if [ -z ${DEVDESCR_MODIFYED} ]; then
+    echo "File ${DEVDESCR_FILE} does not contain device ${DEVICE}. Patching it..."
+    if [ ! -e ${DEVDESCR_FILE}.org ]; then
+      echo "File ${DEVDESCR_FILE}.org does not exist. Copying it..."
+      cp -a ${DEVDESCR_FILE} ${DEVDESCR_FILE}.org
+    fi
+    sed -i "s/\($DEVDESCR_SEARCH\)/\1${DEVDESCR_INSERT}/g" ${DEVDESCR_FILE}
+  fi
+
+  ### Edit webui.js ###
+  WEBUI_MODIFYED=`cat ${WEBUI_FILE} | grep "${DEVICE}"`
+  if [ -z ${WEBUI_MODIFYED} ]; then
+    echo "File ${WEBUI_FILE} does not contain device ${DEVICE}. Patching it..."
+    if [ ! -e ${WEBUI_FILE}.org ]; then
+      echo "File ${WEBUI_FILE}.org does not exist. Copying it..."
+      cp -a ${WEBUI_FILE} ${WEBUI_FILE}.org
+    fi
+    sed -i "s/\($WEBUI_SEARCH\)/\1${WEBUI_INSERT}/g" ${WEBUI_FILE}
+  fi
+
+  mount -o ro,remount /
+
+  ;;
+info)
+  echo "Info: <b>HomeBrew HBW-Sen-EP Addon</b><br>"
+  echo "Info: <a href='https://github.com/jfische/HBW-Sen-EP'>https://github.com/jfische/HBW-Sen-EP</a>"
+  echo "Version: 1.0"
+  echo "Name: HBW-Sen-EP"
+  echo "Operations: uninstall"
+  ;;
+uninstall)
+  mount -o remount,rw /
+
+  if [ -e /firmware/hs485types/hbw-sen-ep.xml ]; then
+    rm -f /firmware/hs485types/hbw-sen-ep.xml
+  fi
+
+  if [ -e /www/config/img/devices/50/HBW-Sen-EP_thumb.png ]; then
+    rm -f /www/config/img/devices/50/HBW-Sen-EP_thumb.png
+  fi
+
+  if [ -e /www/config/img/devices/250/HBW-Sen-EP.png ]; then
+    rm -f /www/config/img/devices/250/HBW-Sen-EP.png
+  fi
+
+  if [ -e ${DEVDESCR_FILE}.org ]; then
+    rm -rf ${DEVDESCR_FILE}
+    mv ${DEVDESCR_FILE}.org ${DEVDESCR_FILE}
+  fi
+
+  if [ -e ${WEBUI_FILE}.org ]; then
+    rm -rf ${WEBUI_FILE}
+    mv ${WEBUI_FILE}.org ${WEBUI_FILE}
+  fi
+
+  rm -rf ${ADDON_DIR}
+  rm -f ${RCD_DIR}/${ADDONNAME}
+
+  mount -o remount,ro /
+  ;;
+esac
